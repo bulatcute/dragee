@@ -8,6 +8,7 @@ import time
 from dataclasses import dataclass
 import requests
 import json
+import asyncio
 
 dotenv.load_dotenv()
 TOKEN = os.environ['TOKEN']
@@ -35,8 +36,6 @@ def parse():
     driver = webdriver.Edge('D:/Projects/msedgedriver.exe')
 
     driver.get('https://arenda.dragee.ru/offer/list/')
-    driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-    time.sleep(5)
 
     soup = bs4(driver.page_source, features='html.parser')
 
@@ -80,12 +79,12 @@ def parse():
     return out
 
 
-def sender():
+async def sender():
     while True:
         try:
             wall_post = queue.pop()
         except:
-            break
+            continue
 
         session = vk.AuthSession(scope='wall,photos', app_id=int(
             APP_ID), access_token=TOKEN, user_login=LOGIN, user_password=PASSWORD)
@@ -120,16 +119,21 @@ def sender():
 Если при обращение к арендодателю с вас попросили комиссию или информация не совпадает с указанной, отправьте ссылку на объявление Администратору https://vk.com/id476040447 он проверит его еще раз!
 #Арендаквартир #Снятьквартиру #Снятьоднокомнатнуюквартиру #Снятьдвухкомнатнуюквартиру #Снятьтрехкомнатнуюквартиру #Арендакомнаты #Снятькомнату #Сдатькомнату #Сдатьоднокомнатнуюквартиру #Сдатьдвухкомнатнуюквартиру #Сдатьтрехкомнатнуюквартиру''', 
                   attachments=attachments)
+        await asyncio.sleep(900)
 
 
-def getter():
-    for post in parse():
-        if post not in queue:
-            queue.append(post)
-        if len(queue) > 50:
-            queue.popleft()
+async def getter():
+    while True:
+        for post in parse():
+            if post not in queue:
+                queue.append(post)
+            if len(queue) > 50:
+                queue.popleft()
+        await asyncio.sleep(1800)
 
 
 if __name__ == "__main__":
-    getter()
-    sender()
+    loop = asyncio.get_event_loop()
+    loop.create_task(getter())
+    loop.create_task(sender())
+    loop.run_forever()

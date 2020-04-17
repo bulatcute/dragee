@@ -30,6 +30,7 @@ class Post:
     adress: str
     phone: str
     vk: str
+    used: bool
 
 
 def parse():
@@ -75,15 +76,19 @@ def parse():
         description = content.text.replace('Показать полностью', '').strip()
 
         out.append(Post(title, description, gallery,
-                        price, district, adress, phone, vk))
-    return out
+                        price, district, adress, phone, vk, False))
+    return out[::-1]
 
 
 async def sender():
     while True:
         try:
             wall_post = queue.pop()
-            queue.append(wall_post)
+            if wall_post.used:
+                queue.appendleft(wall_post)
+                continue
+            wall_post.used = True
+            queue.appendleft(wall_post)
         except:
             continue
 
@@ -126,11 +131,22 @@ async def sender():
 async def getter():
     while True:
         for post in parse():
-            if post not in queue:
+            postused = Post(
+                post.title,
+                post.description,
+                post.gallery,
+                post.price,
+                post.district,
+                post.adress,
+                post.phone,
+                post.vk,
+                True
+            )
+            if post not in queue and postused not in queue:
                 queue.append(post)
             if len(queue) > 50:
                 queue.popleft()
-        await asyncio.sleep(1800)
+        await asyncio.sleep(900)
 
 
 if __name__ == "__main__":

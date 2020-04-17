@@ -1,5 +1,12 @@
 # dragee
 
+Парсит предложения с [dragee.ru](https://dragee.ru) в ваше сообщество вк
+
+Пример:
+
+:::image type="content" source="from.png" alt-text="from":::
+:::image type="content" source="to.png" alt-text="to":::
+
 ## Установка
 
 1. Скачайте webdriver для вашего браузера

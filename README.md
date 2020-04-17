@@ -4,8 +4,8 @@
 
 Пример:
 
-:::image type="content" source="from.png" alt-text="from":::
-:::image type="content" source="to.png" alt-text="to":::
+![from](from.png)
+![to](to.png)
 
 ## Установка
 

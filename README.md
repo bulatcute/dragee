@@ -11,7 +11,7 @@ TOKEN=можно получить пройдя по ссылке https://oauth.v
 USER_ID=id пользователя
 ```
 
-В строке 35 файла worker.py:
+В строке 36 файла worker.py:
 
 `driver = webdriver.Edge('D:/Projects/msedgedriver.exe')`
 

@@ -1,0 +1,6 @@
+beautifulsoup4==4.9.0
+bs4==0.0.1
+python-dotenv==0.13.0
+requests==2.23.0
+selenium==3.141.0
+vk==2.0.2

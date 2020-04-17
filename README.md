@@ -15,6 +15,6 @@ USER_ID=id пользователя
 
 `driver = webdriver.Edge('D:/Projects/msedgedriver.exe')`
 
-- нужно заменить Edge на название нашего браузера
+- нужно заменить Edge на название вашего браузера
 - скачать webdriver для вашей версии браузера
 - заменить D:/Projects/msedgedriver.exe на путь к вашему драйверу

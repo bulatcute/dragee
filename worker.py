@@ -83,6 +83,7 @@ async def sender():
     while True:
         try:
             wall_post = queue.pop()
+            queue.append(wall_post)
         except:
             continue
 

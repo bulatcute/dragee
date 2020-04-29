@@ -90,7 +90,7 @@ def parse():
         content = offer.find('div', 'b-offer__content')
         description = content.text.replace('Показать полностью', '').strip()
 
-        out.append(Post(title, description, gallery,
+        out.append(Post(title, description, gallery[1:],
                         price, district, adress, phone, user_vk, False))
     return out[::-1]
 
@@ -146,7 +146,7 @@ async def sender():
 Если при обращение к арендодателю с вас попросили комиссию или информация не совпадает с указанной, отправьте ссылку на объявление Администратору https://vk.com/id590803836 он проверит его еще раз!
 #Арендаквартир #Снятьквартиру #Снятьоднокомнатнуюквартиру #Снятьдвухкомнатнуюквартиру #Снятьтрехкомнатнуюквартиру #Арендакомнаты #Снятькомнату #Сдатькомнату #Сдатьоднокомнатнуюквартиру #Сдатьдвухкомнатнуюквартиру #Сдатьтрехкомнатнуюквартиру''', 
                   attachments=attachments)
-        await asyncio.sleep(900)
+        await asyncio.sleep(30)
 
 
 async def getter():
@@ -167,7 +167,7 @@ async def getter():
                 queue.append(post)
             if len(queue) > 50:
                 queue.popleft()
-        await asyncio.sleep(900)
+        await asyncio.sleep(30)
 
 
 if __name__ == "__main__":

@@ -1,14 +1,16 @@
-import vk
-import dotenv
-import os
-from collections import deque
-from selenium import webdriver
-from bs4 import BeautifulSoup as bs4
-import time
-from dataclasses import dataclass
-import requests
-import json
 import asyncio
+import datetime
+import json
+import os
+import time
+from collections import deque
+from dataclasses import dataclass
+
+import dotenv
+import requests
+import vk
+from bs4 import BeautifulSoup as bs4
+from selenium import webdriver
 
 dotenv.load_dotenv()
 TOKEN = os.environ['TOKEN']
@@ -29,12 +31,14 @@ class Post:
     district: str
     adress: str
     phone: str
-    vk: str
+    vk: tuple
     used: bool
 
 
 def parse():
-    driver = webdriver.Edge('D:/Projects/msedgedriver.exe')
+    options = webdriver.ChromeOptions()
+    options.add_argument('--headless')
+    driver = webdriver.Chrome('D:/Projects/chromedriver.exe', options=options)
 
     driver.get('https://arenda.dragee.ru/offer/list/')
 
@@ -45,6 +49,9 @@ def parse():
     b_offers = soup.find_all('div', {'class': 'b-offer'})
 
     out = []
+
+    session = vk.Session()
+    api = vk.API(session, v='5.103')
 
     for offer in b_offers:
         if ('Обновлено' in offer.find('div', {'class': 'b-offer__title-date i-inline'}).text
@@ -61,13 +68,21 @@ def parse():
             'div', {'class', 'b-offer__address'}).text.strip().split('\n') if i.strip()])
         adress, district = adr.split('\n')
 
-        phone = offer.find('a', {'class': 'offer-mobile-phone'}).text
+        try:
+            phone = offer.find('a', {'class': 'offer-mobile-phone'}).text
+        except:
+            phone = None        
 
         try:
-            vk = offer.find(
+            user_vk = offer.find(
                 'a', {'class': 'b-offer__link b-offer__vk-link'}).get('href')
-        except:
-            vk = None
+            r = api.users.get(access_token=TOKEN, user_ids=user_vk.split('/')[-1])
+            first_name = r[0]['first_name']
+            last_name = r[0]['last_name']
+            user_vk = (user_vk, f'{first_name} {last_name}')
+        except AttributeError:
+            user_vk = None
+            print('вк юзера нот фаунд')
 
         gallery_div = offer.find('div', {'class': 'b-offer__gallery'})
         gallery = ['https://arenda.dragee.ru' + a.get('href') for a in gallery_div.find_all('a')]
@@ -76,12 +91,16 @@ def parse():
         description = content.text.replace('Показать полностью', '').strip()
 
         out.append(Post(title, description, gallery,
-                        price, district, adress, phone, vk, False))
+                        price, district, adress, phone, user_vk, False))
     return out[::-1]
 
 
 async def sender():
+
     while True:
+        if datetime.datetime.now().hour >= 21 or datetime.datetime.now().hour <= 8:
+            await asyncio.sleep(3600)
+            continue
         try:
             wall_post = queue.pop()
             if wall_post.used:
@@ -108,7 +127,8 @@ async def sender():
             photo = photo[0]
             attachments.append(f'photo{USER_ID}_{photo["id"]}')
         
-        mess_me = f'\nНаписать мне: {wall_post.vk}' if wall_post.vk else ''
+        mess_me = f'\nНаписать мне: @{wall_post.vk[0]} ({wall_post.vk[1]})' if wall_post.vk else ''
+        call_me = f'\nПозвонить мне: {wall_post.phone}' if wall_post.phone else ''
 
         api.wall.post(owner_id='-' + GROUP_ID,
                     message=f'''Понравилась квартира? Сделай РЕПОСТ вдруг её ищут твои друзья
@@ -120,9 +140,10 @@ async def sender():
 Адрес: {wall_post.adress}
 Дополнительно: {wall_post.description}
 
-Пожалуйста, скажите, что узнали об объявлении в группе "De_mall"
-Позвонить мне: {wall_post.phone}{mess_me}
-Если при обращение к арендодателю с вас попросили комиссию или информация не совпадает с указанной, отправьте ссылку на объявление Администратору https://vk.com/id476040447 он проверит его еще раз!
+Пожалуйста, скажите, что узнали об объявлении в группе "ИНФОМИР"
+{call_me}{mess_me}
+
+Если при обращение к арендодателю с вас попросили комиссию или информация не совпадает с указанной, отправьте ссылку на объявление Администратору https://vk.com/id590803836 он проверит его еще раз!
 #Арендаквартир #Снятьквартиру #Снятьоднокомнатнуюквартиру #Снятьдвухкомнатнуюквартиру #Снятьтрехкомнатнуюквартиру #Арендакомнаты #Снятькомнату #Сдатькомнату #Сдатьоднокомнатнуюквартиру #Сдатьдвухкомнатнуюквартиру #Сдатьтрехкомнатнуюквартиру''', 
                   attachments=attachments)
         await asyncio.sleep(900)

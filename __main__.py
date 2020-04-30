@@ -15,7 +15,7 @@ from selenium import webdriver
 dotenv.load_dotenv()
 TOKEN = os.environ['TOKEN']
 GROUP_ID = os.environ['GROUP_ID']
-APP_ID = os.environ['APP_ID']
+APP_ID = '7415460'
 LOGIN = os.environ['PHONE']
 PASSWORD = os.environ['PWD']
 USER_ID = os.environ['USER_ID']

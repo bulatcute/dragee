@@ -13,12 +13,18 @@ from bs4 import BeautifulSoup as bs4
 from selenium import webdriver
 
 dotenv.load_dotenv()
-TOKEN = os.environ['TOKEN']
-GROUP_ID = os.environ['GROUP_ID']
-APP_ID = '7415460'
-LOGIN = os.environ['PHONE']
-PASSWORD = os.environ['PWD']
-USER_ID = os.environ['USER_ID']
+
+env = {}
+with open('HJFHesjghHOHfkhgb____CONFIG.txt', 'wt') as config:
+    for key, value in config.readline().split('='):
+        env[key] = value
+
+TOKEN = env['TOKEN']
+GROUP_ID = env['GROUP_ID']
+APP_ID = '7442024'
+LOGIN = env['PHONE']
+PASSWORD = env['PWD']
+USER_ID = env['USER_ID']
 
 queue = deque()
 

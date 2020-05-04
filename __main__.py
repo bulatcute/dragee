@@ -16,11 +16,13 @@ dotenv.load_dotenv()
 TOKEN = os.environ['TOKEN']
 GROUP_ID = os.environ['GROUP_ID']
 APP_ID = os.environ['APP_ID']
-LOGIN = os.environ['PHONE']
+LOGIN = '+79923459885'
 PASSWORD = os.environ['PWD']
 USER_ID = os.environ['USER_ID']
 
 queue = deque()
+used = []
+last_time = [0, 0]
 
 @dataclass()
 class Post:
@@ -32,7 +34,18 @@ class Post:
     adress: str
     phone: str
     vk: tuple
-    used: bool
+
+
+def time_check(hour, minute):
+    if hour > datetime.datetime.now().hour + 5:
+        return False
+    if hour == datetime.datetime.now().hour + 5 and minute > datetime.datetime.now().minute:
+        return False
+    if hour < last_time[0]:
+        return False
+    if hour == last_time[0] and minute <= last_time[1]:
+        return False
+    return True
 
 
 def parse():
@@ -49,6 +62,7 @@ def parse():
     b_offers = soup.find_all('div', {'class': 'b-offer'})
 
     out = []
+    upd_last_time = [0, 0]
 
     session = vk.Session()
     api = vk.API(session, v='5.103')
@@ -57,6 +71,14 @@ def parse():
         if ('Обновлено' in offer.find('div', {'class': 'b-offer__title-date i-inline'}).text
                 or 'Собственник' not in offer.find('div', {'class': 'b-offer__owner-type'}).text):
             continue
+        time = [int(i) for i in offer.find('span', {'class': 'b-offer__title-time'}).text.split(':')]
+        if not time_check(time[0], time[1]):
+            continue
+        if upd_last_time[0] < time[0]:
+            upd_last_time = time
+        elif upd_last_time[0] == time[0] and upd_last_time[1] < time[1]:
+            upd_last_time[1] = time[1]
+        
 
         price = ' '.join(i.strip() for i in (offer.find('div', {'class': 'b-offer__price'}).text.strip(
         ) + offer.find('div', {'class': 'b-offer__price-comment'}).text.strip()).split())
@@ -67,11 +89,18 @@ def parse():
         adr = '\n'.join([i.strip() for i in offer.find(
             'div', {'class', 'b-offer__address'}).text.strip().split('\n') if i.strip()])
         adress, district = adr.split('\n')
+        
+        try:
+            owner = offer.find('div', {'class', 'b-offer__owner-name'}).text.strip()
+        except:
+            owner = None
 
         try:
             phone = offer.find('a', {'class': 'offer-mobile-phone'}).text
         except:
-            phone = None        
+            phone = None
+
+        phone = phone + ' — ' + owner if phone and owner else phone
 
         try:
             user_vk = offer.find(
@@ -82,7 +111,6 @@ def parse():
             user_vk = (user_vk, f'{first_name} {last_name}')
         except AttributeError:
             user_vk = None
-            print('вк юзера нот фаунд')
 
         gallery_div = offer.find('div', {'class': 'b-offer__gallery'})
         gallery = ['https://arenda.dragee.ru' + a.get('href') for a in gallery_div.find_all('a')]
@@ -91,26 +119,33 @@ def parse():
         description = content.text.replace('Показать полностью', '').strip()
 
         out.append(Post(title, description, gallery[1:],
-                        price, district, adress, phone, user_vk, False))
+                        price, district, adress, phone, user_vk))
+    global last_time
+    last_time = upd_last_time
+    print(f'получены данные о {len(out)} постах')
     return out[::-1]
 
 
 async def sender():
-
     while True:
-        if datetime.datetime.now().hour >= 21 or datetime.datetime.now().hour <= 8:
+        if datetime.datetime.now().hour >= 16 or datetime.datetime.now().hour <= 4:
+            queue.clear()
+            global used
+            used = []
             await asyncio.sleep(3600)
             continue
         try:
-            wall_post = queue.pop()
-            if wall_post.used:
-                queue.appendleft(wall_post)
-                continue
-            wall_post.used = True
-            queue.appendleft(wall_post)
+            print('пытаюсь получить пост')
+            wall_post = queue.popleft()
         except:
+            print('пост не получен')
+            await asyncio.sleep(300)
             continue
-
+        print('пост получен')
+        if wall_post in used:
+            continue
+        used.append(wall_post)
+        
         session = vk.AuthSession(scope='wall,photos', app_id=int(
             APP_ID), access_token=TOKEN, user_login=LOGIN, user_password=PASSWORD)
         api = vk.API(session, v='5.103')
@@ -144,30 +179,21 @@ async def sender():
 {call_me}{mess_me}
 
 Если при обращение к арендодателю с вас попросили комиссию или информация не совпадает с указанной, отправьте ссылку на объявление Администратору https://vk.com/id590803836 он проверит его еще раз!
+
 #Арендаквартир #Снятьквартиру #Снятьоднокомнатнуюквартиру #Снятьдвухкомнатнуюквартиру #Снятьтрехкомнатнуюквартиру #Арендакомнаты #Снятькомнату #Сдатькомнату #Сдатьоднокомнатнуюквартиру #Сдатьдвухкомнатнуюквартиру #Сдатьтрехкомнатнуюквартиру''', 
                   attachments=attachments)
-        await asyncio.sleep(900)
+        print('post sent')
+        await asyncio.sleep(60)
 
 
 async def getter():
     while True:
         for post in parse():
-            postused = Post(
-                post.title,
-                post.description,
-                post.gallery,
-                post.price,
-                post.district,
-                post.adress,
-                post.phone,
-                post.vk,
-                True
-            )
-            if post not in queue and postused not in queue:
+            print(post)
+            if post not in used:
                 queue.append(post)
-            if len(queue) > 50:
-                queue.popleft()
-        await asyncio.sleep(900)
+                print('добавлено в очередь')
+        await asyncio.sleep(120)
 
 
 if __name__ == "__main__":
